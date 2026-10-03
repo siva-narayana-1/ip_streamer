@@ -1,0 +1,200 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                       DEPLOYMENT PACKAGE - FINAL                          ║
+║              Repository: siva-narayana-1/ip_streamer                      ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+📦 PROJECT ROOT
+═════════════════════════════════════════════════════════════════════════════
+
+ip_streamer/
+│
+├── 🚀 THREE DEPLOYMENT SCRIPTS (ONLY THESE)
+├── backend.sh                          ← Deploy backend API
+├── frontend.sh                         ← Deploy frontend (build + copy)
+├── nginx_setup.sh                      ← Configure nginx for both domains
+│
+├── 📖 DOCUMENTATION
+├── README.md                           ← Application overview & API
+├── DEPLOY.md                           ← Deployment instructions
+│
+├── 📚 BACKEND
+├── backend/
+│   ├── package.json                    ← Dependencies
+│   ├── server.js                       ← Express API + WebSocket
+│   ├── db.js                           ← PostgreSQL layer
+│   ├── .env.example                    ← Configuration template
+│   ├── scripts/create-db.js            ← Database setup
+│   └── node_modules/                   ← (Created after npm install)
+│
+├── 🎨 FRONTEND
+├── frontend/
+│   ├── package.json                    ← Vite + dependencies
+│   ├── vite.config.js                  ← Build config
+│   ├── index.html                      ← HTML entry
+│   ├── .env.example                    ← Configuration
+│   ├── src/
+│   │   ├── main.js                     ← App logic
+│   │   └── styles.css                  ← Responsive styles
+│   ├── dist/                           ← (Created after npm run build)
+│   └── node_modules/                   ← (Created after npm install)
+│
+└── .gitignore                          ← Excludes node_modules, .env
+
+
+═════════════════════════════════════════════════════════════════════════════
+🎯 DEPLOYMENT FLOW
+═════════════════════════════════════════════════════════════════════════════
+
+1️⃣  CLONE ONCE
+    git clone https://github.com/siva-narayana-1/ip_streamer.git
+    cd ip_streamer
+
+2️⃣  DEPLOY BACKEND
+    sudo ./backend.sh
+    - npm install in backend/
+    - Create database
+    - Start systemd service (port 3000)
+
+3️⃣  DEPLOY FRONTEND
+    sudo ./frontend.sh
+    - npm install in frontend/
+    - npm run build (creates frontend/dist/)
+    - Copy to /srv/rtsp-viewer-frontend
+
+4️⃣  SETUP NGINX
+    sudo ./nginx_setup.sh streamtest.sivabio.in streamtest-api.sivabio.in
+    - Create configs in /etc/nginx/sites-available/
+    - Configure reverse proxy to port 3000
+    - Configure WebSocket proxying
+
+5️⃣  SSL CERTIFICATES
+    sudo certbot --nginx -d streamtest.sivabio.in -d streamtest-api.sivabio.in
+
+6️⃣  UPDATE & RESTART
+    sudo nano backend/.env          (update CORS_ORIGIN)
+    sudo systemctl restart rtsp-viewer-backend
+
+
+═════════════════════════════════════════════════════════════════════════════
+✨ WHAT'S DEPLOYED WHERE
+═════════════════════════════════════════════════════════════════════════════
+
+After running all scripts:
+
+Backend:
+  Process:   systemd service "rtsp-viewer-backend"
+  Port:      3000 (local only)
+  Config:    /ip_streamer/backend/.env
+  Database:  PostgreSQL stream_test (localhost:5432)
+
+Frontend:
+  Location:  /srv/rtsp-viewer-frontend/
+  Files:     Static HTML/CSS/JS (from dist/)
+  Config:    /ip_streamer/frontend/.env (VITE_API_URL)
+
+Web Server:
+  nginx listens on:
+    - Port 80  → redirects to 443
+    - Port 443 → serves frontend, proxies API/WebSocket
+
+Domains:
+  Frontend:  https://streamtest.sivabio.in           (static files)
+  API:       https://streamtest-api.sivabio.in/api   (proxied to :3000)
+  WebSocket: wss://streamtest-api.sivabio.in/ws      (proxied to :3000)
+
+SSL:
+  Certificates:  /etc/letsencrypt/live/
+
+
+═════════════════════════════════════════════════════════════════════════════
+⚡ EACH SCRIPT IS INDEPENDENT
+═════════════════════════════════════════════════════════════════════════════
+
+backend.sh
+  - Can run standalone
+  - Assumes you're in project root (checks for backend/)
+  - No cloning (uses existing repo)
+  - Creates/starts systemd service
+  - Output: Backend running on port 3000
+
+frontend.sh
+  - Can run standalone
+  - Assumes you're in project root (checks for frontend/)
+  - No cloning (uses existing repo)
+  - Builds and deploys to /srv/rtsp-viewer-frontend
+  - Output: Static files ready to serve
+
+nginx_setup.sh
+  - Can run standalone
+  - Takes domain names as arguments
+  - Assumes backend is running on :3000
+  - Assumes frontend is deployed to /srv/rtsp-viewer-frontend
+  - Creates nginx configs and reloads
+
+monitor.sh (Optional)
+  - Check service status anytime
+  - No changes, just reads status
+
+
+═════════════════════════════════════════════════════════════════════════════
+📝 CONFIGURATION FILES
+═════════════════════════════════════════════════════════════════════════════
+
+backend/.env.example
+  Copied to backend/.env by backend.sh
+  Customize:
+    DB_PASSWORD  ← Change to secure password
+    CORS_ORIGIN  ← Update after getting SSL
+
+frontend/.env.example
+  Copied to frontend/.env by frontend.sh
+  Customize:
+    VITE_API_URL  ← Should point to backend
+
+
+═════════════════════════════════════════════════════════════════════════════
+🔄 QUICK REFERENCE
+═════════════════════════════════════════════════════════════════════════════
+
+Check backend status:
+  sudo journalctl -u rtsp-viewer-backend -f
+
+Check nginx:
+  sudo systemctl status nginx
+  sudo nginx -t
+
+Restart backend:
+  sudo systemctl restart rtsp-viewer-backend
+
+Reload nginx:
+  sudo systemctl reload nginx
+
+View database:
+  sudo -u postgres psql -d stream_test
+  SELECT count(*) FROM cameras;
+  \q
+
+
+═════════════════════════════════════════════════════════════════════════════
+✅ DEPLOYMENT CHECKLIST
+═════════════════════════════════════════════════════════════════════════════
+
+□ Clone repository
+□ Run: sudo ./backend.sh
+□ Edit backend/.env with secure DB password
+□ Restart backend: sudo systemctl restart rtsp-viewer-backend
+□ Run: sudo ./frontend.sh
+□ Run: sudo ./nginx_setup.sh streamtest.sivabio.in streamtest-api.sivabio.in
+□ Get SSL: sudo certbot --nginx
+□ Update CORS_ORIGIN in backend/.env
+□ Restart backend again
+□ Test: curl https://streamtest.sivabio.in
+□ Add cameras at https://streamtest.sivabio.in
+□ Test connection on a camera
+□ Watch streams!
+
+
+═════════════════════════════════════════════════════════════════════════════
+
+All done! Your RTSP Viewer is production-ready.
+

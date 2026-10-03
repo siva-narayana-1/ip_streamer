@@ -1,0 +1,15 @@
+{
+  "name": "rtsp-viewer-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "RTSP viewer web UI (Vite)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite preview --host --port 5173"
+  },
+  "dependencies": { "@cycjimmy/jsmpeg-player": "^6.1.2" },
+  "devDependencies": { "vite": "^6.0.0" }
+}

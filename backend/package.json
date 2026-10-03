@@ -1,0 +1,9 @@
+{
+  "name": "rtsp-viewer-backend",
+  "version": "1.0.0",
+  "description": "RTSP viewer API + WebSocket streaming (Node.js, ffmpeg, PostgreSQL)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "dev": "node --watch server.js", "db:create": "node scripts/create-db.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "cors": "^2.8.5", "dotenv": "^17.0.0", "express": "^4.19.2", "pg": "^8.12.0", "ws": "^8.18.0" }
+}

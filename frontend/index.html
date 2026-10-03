@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1020">
+  <title>RTSP Live Viewer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m22 8-6 4 6 4V8Z'/%3E%3Crect x='2' y='6' width='14' height='12' rx='2'/%3E%3C/svg%3E">
+  </head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <span class="brand-logo"><svg viewBox="0 0 24 24"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></span>
+        <span class="brand-text">RTSP<b>Viewer</b></span>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="live"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Live View</span></button>
+        <button class="nav-item" data-view="cameras"><svg viewBox="0 0 24 24"><path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Cameras</span></button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="stat"><span id="statOnline">0</span><small>Live now</small></div>
+        <div class="stat"><span id="statTotal">0</span><small>Cameras</small></div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h1 id="pageTitle">Live View</h1>
+        <div class="top-actions">
+          <div class="seg" id="layoutSeg" role="group" aria-label="Grid layout">
+            <button data-cols="0" class="active" title="Auto">Auto</button>
+            <button data-cols="1">1</button>
+            <button data-cols="2">2</button>
+            <button data-cols="3">3</button>
+            <button data-cols="4">4</button>
+          </div>
+          <button class="btn ghost" id="pauseAll"><svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg><span>Pause all</span></button>
+          <button class="icon-btn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+          <button class="btn primary" id="addBtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Add camera</span></button>
+        </div>
+      </header>
+
+      <div class="banner" id="ffBanner" hidden>ffmpeg was not found on the server. Install ffmpeg or set the FFMPEG_PATH environment variable, then restart.</div>
+
+      <main class="content">
+        <section id="view-live" class="view">
+          <div class="grid" id="grid"></div>
+          <div class="empty" id="liveEmpty" hidden>
+            <div class="empty-ico"><svg viewBox="0 0 24 24"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg></div>
+            <h2>No cameras yet</h2>
+            <p>Add your first RTSP camera to start watching live.</p>
+            <button class="btn primary" data-open-add>Add camera</button>
+          </div>
+        </section>
+
+        <section id="view-cameras" class="view" hidden>
+          <div class="toolbar">
+            <input type="search" id="search" placeholder="Search cameras…" aria-label="Search cameras">
+          </div>
+          <div class="cards" id="camList"></div>
+          <div class="empty" id="camEmpty" hidden>
+            <div class="empty-ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+            <h2>Nothing here</h2>
+            <p>No cameras match. Add one to get started.</p>
+            <button class="btn primary" data-open-add>Add camera</button>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="nav-item active" data-view="live"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Live</span></button>
+    <button class="nav-item" data-view="cameras"><svg viewBox="0 0 24 24"><path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Cameras</span></button>
+  </nav>
+
+  <!-- add / edit dialog -->
+  <dialog id="camDialog">
+    <form method="dialog" id="camForm" novalidate>
+      <div class="dlg-head"><h2 id="dlgTitle">Add camera</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+      <div class="dlg-body">
+        <label>Name<input name="name" required maxlength="60" placeholder="Front door" autocomplete="off"></label>
+        <div class="row-proto">
+          <label>Protocol
+            <select name="protocol" id="protocol">
+              <option value="rtsp">RTSP</option>
+              <option value="rtsps">RTSPS (secure)</option>
+              <option value="http">HTTP</option>
+              <option value="https">HTTPS</option>
+            </select>
+          </label>
+          <label>IP address / host<input name="ip" required placeholder="192.168.1.10" autocomplete="off" spellcheck="false" inputmode="url"></label>
+          <label>Port<input name="port" type="number" min="1" max="65535" placeholder="554" inputmode="numeric"></label>
+        </div>
+        <div class="row2">
+          <label>Username<input name="username" placeholder="optional" autocomplete="off" spellcheck="false"></label>
+          <label>Password<input name="password" type="password" placeholder="optional" autocomplete="new-password"></label>
+        </div>
+        <label>Stream path<input name="path" placeholder="stream1  or  video.mjpg" autocomplete="off" spellcheck="false"></label>
+        <label>Stream URL <span class="auto-tag">auto-filled</span>
+          <div class="url-preview"><input id="urlPreview" readonly tabindex="-1" aria-live="polite" placeholder="Fill the fields above"><button type="button" class="icon-btn" id="copyUrl" title="Copy URL" aria-label="Copy URL"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+        </label>
+        <div class="row2">
+          <label>Location<input name="location" maxlength="80" placeholder="Entrance (optional)" autocomplete="off"></label>
+          <label>Quality
+            <select name="quality">
+              <option value="low">Low – 640px, saves bandwidth</option>
+              <option value="medium" selected>Medium – 960px</option>
+              <option value="high">High – 1080p</option>
+            </select>
+          </label>
+        </div>
+        <div class="test-row">
+          <button type="button" class="btn ghost" id="testBtn">Test connection</button>
+          <span class="test-msg" id="testMsg" role="status"></span>
+        </div>
+        <p class="form-err" id="formErr" role="alert"></p>
+      </div>
+      <div class="dlg-foot">
+        <button type="button" class="btn ghost" data-close>Cancel</button>
+        <button type="submit" class="btn primary" id="saveBtn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- focus viewer -->
+  <dialog id="viewDialog" class="viewer">
+    <div class="viewer-head">
+      <div><h2 id="vTitle"></h2><small id="vSub"></small></div>
+      <div class="viewer-actions">
+        <button class="icon-btn" id="vShot" title="Save snapshot" aria-label="Save snapshot"><svg viewBox="0 0 24 24"><path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+        <button class="icon-btn" id="vFull" title="Fullscreen" aria-label="Fullscreen"><svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+        <button class="icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+    </div>
+    <div class="viewer-stage" id="vStage"></div>
+  </dialog>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
